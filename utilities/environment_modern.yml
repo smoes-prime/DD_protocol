@@ -1,0 +1,26 @@
+# Modern Ubuntu + NVIDIA driver (CUDA 12.x / 13.x driver) environment for Deep Docking.
+# TensorFlow 2.x keras API matches this repo's imports (tensorflow.keras).
+#
+# Create:
+#   conda env create -f utilities/environment_modern.yml
+#   conda activate dd-env
+#
+# Verify GPU:
+#   python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+
+name: dd-env
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - pydot
+  - rdkit
+  - pip:
+      - tensorflow[and-cuda]>=2.15,<2.19
