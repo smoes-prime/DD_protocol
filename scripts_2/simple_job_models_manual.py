@@ -175,7 +175,8 @@ for i in range(len(all_hyperparas)):
         cwd = os.getcwd()
         ref.write('cd {}\n'.format(cwd))
         hyp_args = '-os {} -bs {} -num_units {} -dropout {} -learn_rate {} -bin_array {} -wt {} -cf {}'.format(*all_hyperparas[i])
-        ref.write('python -u progressive_docking.py ' + hyp_args + ' ' + other_args)
+        # Run from repository root where scripts_2/ exists.
+        ref.write('python -u scripts_2/progressive_docking.py ' + hyp_args + ' ' + other_args)
         ref.write("\n echo complete")
     count += 1
     
