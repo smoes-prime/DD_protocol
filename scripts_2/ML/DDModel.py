@@ -184,13 +184,28 @@ class DDModel(Models):
             with open(path + ".json", 'w') as json_file:
                 json_file.write(json_model)
         else:
-            try:
-                self.model.save(path, save_format='h5')
-            except:
-                print("Could not save as h5 file. This is probably due to tensorflow version.")
-                print("If the model is saved a directory, it will cause issues.")
-                print("Trying to save again...")
-                self.model.save(path)
+            save_path = DDModel._resolve_save_path(path)
+            self.model.save(save_path)
+
+    @staticmethod
+    def _resolve_save_path(path):
+        _, ext = os.path.splitext(path)
+        ext = ext.lower()
+        if ext in ['.keras', '.h5']:
+            return path
+        return path + '.keras'
+
+    @staticmethod
+    def _resolve_load_path(path):
+        _, ext = os.path.splitext(path)
+        if ext:
+            return path
+
+        candidates = [path + '.keras', path + '.h5', path]
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                return candidate
+        return path
 
     def load_stats(self, path):
         """
@@ -341,6 +356,7 @@ class DDModel(Models):
                 model = model.replace('.json', "")
                 pre_compiled = False
             else:
+                model = DDModel._resolve_load_path(model)
                 dd_model.model = tf.keras.models.load_model(model, custom_objects=Models.get_custom_objects())
         else:
             dd_model = DDModel(mode="loaded_model", input_shape=[], hyperparameters={})
