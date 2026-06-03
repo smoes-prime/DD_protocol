@@ -207,6 +207,14 @@ class DDModel(Models):
                 return candidate
         return path
 
+    @staticmethod
+    def _stats_base_path(path):
+        """Base path for .ddss files (always extensionless model id)."""
+        base, ext = os.path.splitext(path)
+        if ext.lower() in ['.keras', '.h5']:
+            return base
+        return path
+
     def load_stats(self, path):
         """
         Load the stats from a .ddss file into the current DDModel
@@ -356,8 +364,12 @@ class DDModel(Models):
                 model = model.replace('.json', "")
                 pre_compiled = False
             else:
-                model = DDModel._resolve_load_path(model)
-                dd_model.model = tf.keras.models.load_model(model, custom_objects=Models.get_custom_objects())
+                stats_base = DDModel._stats_base_path(model)
+                load_path = DDModel._resolve_load_path(model)
+                dd_model.model = tf.keras.models.load_model(
+                    load_path, custom_objects=Models.get_custom_objects()
+                )
+                model = stats_base
         else:
             dd_model = DDModel(mode="loaded_model", input_shape=[], hyperparameters={})
             dd_model.model = model
