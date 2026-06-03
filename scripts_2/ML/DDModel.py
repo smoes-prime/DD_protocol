@@ -150,7 +150,7 @@ class DDModel(Models):
         # Train the model and store the history
         self.history = self.model.fit(train_dataset, epochs=epochs,
                                       class_weight=class_weight, verbose=verbose, validation_data=valid_dataset,
-                                      callbacks=callbacks, workers=8, use_multiprocessing=True)
+                                      callbacks=callbacks)
 
         # Store the training time
         training_time = time.time() - training_time
