@@ -32,8 +32,9 @@ echo "=== Finish phase 5 for iteration $ITER ==="
 
 if ! ls "$ALL_MODELS"/model_*.keras "$ALL_MODELS"/model_* 2>/dev/null | head -1 >/dev/null; then
   echo "ERROR: no trained models in $ALL_MODELS" >&2
-  echo "Run all phase-4 jobs first:" >&2
-  echo "  for f in $PROJECT_DIR/iteration_${ITER}/simple_job/simple_job_*.sh; do bash \"\$f\"; done" >&2
+  echo "Run phase-4 first:" >&2
+  echo "  ./utilities/run_iteration1_phase4_gpu.sh   # iteration 1" >&2
+  echo "  ./utilities/run_gpu_jobs.sh train $ITER $PROJECT_DIR" >&2
   exit 1
 fi
 
@@ -60,10 +61,8 @@ if [[ "${#jobs[@]}" -eq 0 ]]; then
 fi
 
 mkdir -p "$PRED_DIR"
-for job in "${jobs[@]}"; do
-  echo "Running $job"
-  bash "$job" | tee "${job%.sh}.log"
-done
+export DD_GPU_AUTO="${DD_GPU_AUTO:-1}"
+"$ROOT_DIR/utilities/run_gpu_jobs.sh" predict "$ITER" "$PROJECT_DIR"
 
 n_txt=$(find "$PRED_DIR" -maxdepth 1 -name '*.txt' | wc -l)
 echo "Prediction shards in $PRED_DIR: $n_txt"

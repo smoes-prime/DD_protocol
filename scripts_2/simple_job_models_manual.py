@@ -5,6 +5,7 @@ import argparse
 import glob
 import time
 import os
+import subprocess
 
 try:
     import __builtin__
@@ -43,6 +44,15 @@ parser.add_argument('-plm', '--percent_last_mols', required=True, help='% of top
 # Pass the threshold
 parser.add_argument('-ct', '--recall', required=False, default=0.9, help='Recall, [0,1] range, default value 0.9')
 
+parser.add_argument('--batch_sizes', required=False, default=None,
+                    help='Comma-separated batch sizes (overrides GPU auto profile)')
+parser.add_argument('--num_units_list', required=False, default=None,
+                    help='Comma-separated hidden units (overrides GPU auto profile)')
+parser.add_argument('--oss_list', required=False, default=None,
+                    help='Comma-separated oversample sizes')
+parser.add_argument('--dropout_list', required=False, default=None,
+                    help='Comma-separated dropout rates')
+
 # Flag for switching between functions that determine how many mols to be left at the end of iteration 
 #   if not provided it defaults to a linear dec
 funct_flags = parser.add_mutually_exclusive_group(required=False)
@@ -71,30 +81,80 @@ SAVE_PATH = io_args.save_path
 # if no save path is provided we just save it in the same location as the data
 if SAVE_PATH is None: SAVE_PATH = DATA_PATH
 
+
+def _parse_int_list(csv_str):
+    return [int(x.strip()) for x in csv_str.split(',') if x.strip()]
+
+
+def _parse_float_list(csv_str):
+    return [float(x.strip()) for x in csv_str.split(',') if x.strip()]
+
+
+def _source_gpu_profile():
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    script = os.path.join(repo_root, 'utilities', 'dd_gpu_profile.sh')
+    if not os.path.isfile(script):
+        return
+    cmd = 'set -a; source "{}"; set +a; env'.format(script)
+    proc = subprocess.run(['bash', '-c', cmd], capture_output=True, text=True, cwd=repo_root)
+    if proc.returncode != 0:
+        print('GPU profile warning:', proc.stderr)
+        return
+    for line in proc.stdout.splitlines():
+        if line.startswith('DD_') and '=' in line:
+            key, val = line.split('=', 1)
+            os.environ[key] = val
+
+
+if os.environ.get('DD_GPU_AUTO', '0') == '1':
+    _source_gpu_profile()
+
 # sums the first column and divides it by 1 million (this is our total database size)
 t_mol = pd.read_csv(mdd+'/Mol_ct_file_%s.csv'%protein,header=None)[[0]].sum()[0]/1000000 # num of compounds in each file is mol_ct_file
 
 cummulative = 0.25*n_it
-dropout = [0.2, 0.5]
 learn_rate = [0.0001]
 bin_array = [2, 3]
 wt = [2, 3]
-if nhp < 144:
-   bs = [256]
+
+if io_args.dropout_list:
+    dropout = _parse_float_list(io_args.dropout_list)
+elif os.environ.get('DD_DROPOUT'):
+    dropout = _parse_float_list(os.environ['DD_DROPOUT'])
+else:
+    dropout = [0.2, 0.5]
+
+if io_args.batch_sizes:
+    bs = _parse_int_list(io_args.batch_sizes)
+elif os.environ.get('DD_BATCH_SIZES'):
+    bs = _parse_int_list(os.environ['DD_BATCH_SIZES'])
+elif nhp < 144:
+    bs = [256]
 else:
     bs = [128, 256]
-    
-if nhp < 48:
+
+if io_args.oss_list:
+    oss = _parse_int_list(io_args.oss_list)
+elif os.environ.get('DD_OSS'):
+    oss = _parse_int_list(os.environ['DD_OSS'])
+elif nhp < 48:
     oss = [10]
 elif nhp < 72:
     oss = [5, 10]
 else:
     oss = [5, 10, 20]
-    
-if nhp < 24:
+
+if io_args.num_units_list:
+    num_units = _parse_int_list(io_args.num_units_list)
+elif os.environ.get('DD_NUM_UNITS'):
+    num_units = _parse_int_list(os.environ['DD_NUM_UNITS'])
+elif nhp < 24:
     num_units = [1500, 2000]
 else:
     num_units = [100, 1500, 2000]
+
+print('GPU profile:', os.environ.get('DD_GPU_PROFILE', 'legacy/default'))
+print('Grid bs:', bs, 'units:', num_units, 'oss:', oss, 'dropout:', dropout)
 
 try:
     os.mkdir(SAVE_PATH+'/iteration_'+str(n_it)+'/simple_job')
@@ -161,6 +221,14 @@ for o in oss:   # Over Sample Size
                     for ba in bin_array:
                         for w in wt:    # Weight
                             all_hyperparas.append([o,batch,nu,do,lr,ba,w,cf_start])
+
+cap_jobs = int(os.environ.get('DD_CAP_JOBS', '0'))
+if cap_jobs > 0 and len(all_hyperparas) > cap_jobs:
+    print('Capping jobs from', len(all_hyperparas), 'to', cap_jobs, '(DD_CAP_JOBS)')
+    all_hyperparas = all_hyperparas[:cap_jobs]
+elif nhp > 0 and len(all_hyperparas) > nhp:
+    print('Capping jobs from', len(all_hyperparas), 'to', nhp, '(number_of_hyp)')
+    all_hyperparas = all_hyperparas[:nhp]
 
 print('Total hyp:', len(all_hyperparas))
 

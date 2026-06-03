@@ -117,29 +117,50 @@ If exit code 2: some sampled IDs are missing from your docked CSV — expand
 
 **Do not run** `extract_labels.py` unless you have real SDFs in `iteration_1/docked/`.
 
-## 6. Phase 4 — train models (GPU)
+## 6. Phase 4 — train models (GPU-aware, one job at a time)
+
+**Do not** run `for f in simple_job_*.sh; do bash "$f"; done` in parallel — it exhausts VRAM on 8GB cards.
 
 ```bash
-python scripts_2/simple_job_models_manual.py \
-  --iteration_no 1 \
-  --morgan_directory $DD_DATA_ROOT/library_morgan \
-  --file_path $FILE_PATH/$PROTEIN \
-  --number_of_hyp 24 \
-  --total_iterations 11 \
-  --is_last False \
-  --number_mol 1000000 \
-  --percent_first_mols 1 \
-  --percent_last_mols 0.01 \
-  --recall 0.9
+export DD_GPU_AUTO=1
+bash utilities/setup_dd_conda_libs.sh   # once, if CXXABI ImportError appears
 
-# Run each generated job (example: first model)
-bash $FILE_PATH/$PROTEIN/iteration_1/simple_job/simple_job_1.sh
+# Iteration 1 (auto-detects GPU, uses bs 64/128 and units 100–512 on 8GB)
+./utilities/run_iteration1_phase4_gpu.sh
 ```
+
+Manual overrides:
+
+| Variable | Example | Effect |
+|----------|---------|--------|
+| `DD_GPU_PROFILE_FORCE` | `8gb` | Force profile without nvidia-smi |
+| `DD_BATCH_SIZES` | `64,128` | Batch sizes in generated jobs |
+| `DD_NUM_UNITS` | `100,256,512` | Hidden layer sizes |
+| `DD_MIN_FREE_MIB` | `3500` | Wait until GPU has this much free memory |
+| `DD_CAP_JOBS` | `12` | Cap number of training jobs |
+
+Or regenerate + run for any iteration:
+
+```bash
+DD_GPU_AUTO=1 python scripts_2/simple_job_models_manual.py ... # same args as before
+./utilities/run_gpu_jobs.sh train 1 $FILE_PATH/$PROTEIN
+```
+
+Completed jobs get a `simple_job_N.sh.done` marker; re-running skips them.
 
 For later iterations: repeat phase 1 with `-cdd` pointing to previous
 `iteration_N/morgan_1024_predictions`, then `simulate_labels.py --iteration N`.
 
 ## 7. Phase 5 — screen library (GPU)
+
+```bash
+ITER=1 ./utilities/finish_iteration_phase5.sh
+```
+
+This runs hyperparameter evaluation, creates prediction jobs, and runs them
+sequentially via `run_gpu_jobs.sh predict`.
+
+Or manually:
 
 ```bash
 python scripts_2/hyperparameter_result_evaluation.py \
@@ -155,7 +176,13 @@ python scripts_2/simple_job_predictions_manual.py \
   --n_iteration 1 \
   --morgan_directory $DD_DATA_ROOT/library_morgan
 
-bash $FILE_PATH/$PROTEIN/iteration_1/simple_job_predictions/simple_job_1.sh
+./utilities/run_gpu_jobs.sh predict 1 $FILE_PATH/$PROTEIN
+```
+
+## 8. Iterations 2–11 (simulation driver)
+
+```bash
+./utilities/run_dd_simulation_pipeline.sh
 ```
 
 ## Important notes

@@ -100,25 +100,7 @@ run_step() {
   "$@" 2>&1 | tee -a "$log"
 }
 
-run_jobs_in_dir() {
-  local iter="$1"
-  local kind="$2"  # train or predict
-  local jobs_dir="$3"
-
-  shopt -s nullglob
-  local jobs=("$jobs_dir"/simple_job_*.sh)
-  shopt -u nullglob
-  if [[ "${#jobs[@]}" -eq 0 ]]; then
-    echo "ERROR: no jobs found in $jobs_dir" >&2
-    exit 1
-  fi
-
-  local idx=0
-  for job in "${jobs[@]}"; do
-    idx=$((idx+1))
-    run_step "$iter" "${kind}_job_${idx}" bash "$job"
-  done
-}
+export DD_GPU_AUTO="${DD_GPU_AUTO:-1}"
 
 echo "=== DD simulation pipeline ==="
 echo "Repo:             $ROOT_DIR"
@@ -172,9 +154,9 @@ for ((it=START_ITER; it<=END_ITER; it++)); do
       --project_dir "$PROJECT_DIR" \
       --iteration "$it"
 
-  # Phase 4: generate training jobs and run all
+  # Phase 4: generate training jobs and run sequentially on GPU
   run_step "$it" "phase4_make_jobs" \
-    python scripts_2/simple_job_models_manual.py \
+    env DD_GPU_AUTO=1 python scripts_2/simple_job_models_manual.py \
       --iteration_no "$it" \
       --morgan_directory "$DD_DATA_ROOT/library_morgan" \
       --file_path "$PROJECT_DIR" \
@@ -186,7 +168,8 @@ for ((it=START_ITER; it<=END_ITER; it++)); do
       --percent_last_mols "$PERCENT_LAST_MOLS" \
       --recall "$RECALL"
 
-  run_jobs_in_dir "$it" "train" "$PROJECT_DIR/iteration_${it}/simple_job"
+  run_step "$it" "phase4_train_gpu" \
+    "$ROOT_DIR/utilities/run_gpu_jobs.sh" train "$it" "$PROJECT_DIR"
 
   # Phase 5: pick best model and generate/run prediction jobs
   run_step "$it" "phase5_eval" \
@@ -204,7 +187,8 @@ for ((it=START_ITER; it<=END_ITER; it++)); do
       --n_iteration "$it" \
       --morgan_directory "$DD_DATA_ROOT/library_morgan"
 
-  run_jobs_in_dir "$it" "predict" "$PROJECT_DIR/iteration_${it}/simple_job_predictions"
+  run_step "$it" "phase5_predict_gpu" \
+    "$ROOT_DIR/utilities/run_gpu_jobs.sh" predict "$it" "$PROJECT_DIR"
 
   echo "Iteration $it complete."
 done
