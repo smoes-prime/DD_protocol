@@ -45,6 +45,7 @@ for f in part_files:
     with open(SAVE_PATH + '/iteration_' + str(n_it) + '/simple_job_predictions/simple_job_' + str(ct) + '.sh', 'w') as ref:
         print(SAVE_PATH + '/iteration_' + str(n_it) + '/simple_job_predictions/simple_job_' + str(ct) + '.sh')
         ref.write('#!/bin/bash\n')
+        ref.write('if [ -n "${CONDA_PREFIX:-}" ]; then export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"; fi\n')
         cwd = os.getcwd()
         ref.write('cd {}\n'.format(cwd))
         ref.write('python -u scripts_2/Prediction_morgan_1024.py ' + '-fn' + ' ' + f.split('/')[

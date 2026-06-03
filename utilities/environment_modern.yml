@@ -18,9 +18,12 @@ dependencies:
   - pip
   - numpy
   - pandas
+  - scipy
   - scikit-learn
   - matplotlib
   - pydot
   - rdkit
+  - libstdcxx-ng
+  - libgcc-ng
   - pip:
       - tensorflow[and-cuda]>=2.15,<2.19

@@ -172,6 +172,7 @@ count = 1
 for i in range(len(all_hyperparas)):
     with open(SAVE_PATH+'/iteration_'+str(n_it)+'/simple_job/simple_job_'+str(count)+'.sh', 'w') as ref:
         ref.write('#!/bin/bash\n')
+        ref.write('if [ -n "${CONDA_PREFIX:-}" ]; then export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"; fi\n')
         cwd = os.getcwd()
         ref.write('cd {}\n'.format(cwd))
         hyp_args = '-os {} -bs {} -num_units {} -dropout {} -learn_rate {} -bin_array {} -wt {} -cf {}'.format(*all_hyperparas[i])

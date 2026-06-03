@@ -9,6 +9,10 @@
 #
 set -euo pipefail
 
+if [[ -n "${CONDA_PREFIX:-}" ]]; then
+  export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
