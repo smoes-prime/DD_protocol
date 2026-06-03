@@ -11,11 +11,14 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 from tensorflow import keras
+from tensorflow.keras import mixed_precision
 import time
 import os
 
 import warnings
 warnings.filterwarnings('ignore')
+
+mixed_precision.set_global_policy('mixed_float16')
 
 
 class DDModel(Models):
@@ -125,7 +128,17 @@ class DDModel(Models):
         train_x = np.reshape(train_x, shape_train_x)
         validation_data_x = np.reshape(validation_data[0], shape_valid_x)
         validation_data_y = validation_data[1]
-        validation_data = (validation_data_x, validation_data_y)
+
+        # Optimize the data loading with tf.data.Dataset
+        train_dataset = tf.data.Dataset.from_tensor_slices((train_x, train_y))
+        if shuffle:
+            train_dataset = train_dataset.shuffle(buffer_size=min(10000, len(train_x)))
+        train_dataset = train_dataset.batch(batch_size)
+        train_dataset = train_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
+
+        valid_dataset = tf.data.Dataset.from_tensor_slices((validation_data_x, validation_data_y))
+        valid_dataset = valid_dataset.batch(batch_size)
+        valid_dataset = valid_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
 
         # Track the training time
         training_time = time.time()
@@ -135,8 +148,8 @@ class DDModel(Models):
             class_weight = None
 
         # Train the model and store the history
-        self.history = self.model.fit(train_x, train_y, epochs=epochs, batch_size=batch_size, shuffle=shuffle,
-                                      class_weight=class_weight, verbose=verbose, validation_data=validation_data,
+        self.history = self.model.fit(train_dataset, epochs=epochs,
+                                      class_weight=class_weight, verbose=verbose, validation_data=valid_dataset,
                                       callbacks=callbacks)
 
         # Store the training time
@@ -169,9 +182,15 @@ class DDModel(Models):
 
         x_test = np.reshape(x_test, newshape=shape)
 
+        # Optimize the inference with tf.data.Dataset
+        test_dataset = tf.data.Dataset.from_tensor_slices(x_test)
+        # Using a larger batch size for inference can further accelerate prediction on GPU
+        test_dataset = test_dataset.batch(1024)
+        test_dataset = test_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
+
         # Predict and return the predictions
         prediction_time = time.time()  # Keep track of how long prediction took
-        predictions = self.model.predict(x_test, verbose=verbose)  # Predict
+        predictions = self.model.predict(test_dataset, verbose=verbose)  # Predict
         prediction_time = time.time() - prediction_time  # Update prediction time
         self.time['prediction_time'] = prediction_time  # Store the prediction time
 
