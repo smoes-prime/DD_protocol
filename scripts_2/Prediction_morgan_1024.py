@@ -50,10 +50,28 @@ def prediction_morgan(fname, models, thresh):   # TODO: improve runtime with par
         no = 0
         for line in ref:
             tmp = line.rstrip().split(',')
+            if tmp and tmp[0] == 'ZINC_ID':
+                continue
             on_bit_vector = tmp[1:]
             z_id.append(tmp[0])
+            bad_row = False
             for elem in on_bit_vector:
-                X_set[no,int(elem)] = 1
+                elem = elem.strip()
+                if not elem:
+                    continue
+                try:
+                    bit_idx = int(elem)
+                except ValueError:
+                    bad_row = True
+                    break
+                if 0 <= bit_idx < n_features:
+                    X_set[no, bit_idx] = 1
+                else:
+                    bad_row = True
+                    break
+            if bad_row:
+                z_id.pop()
+                continue
             no+=1
             if no == per_time:
                 X_set = X_set[:no, :]
