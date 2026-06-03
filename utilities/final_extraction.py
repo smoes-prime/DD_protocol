@@ -43,7 +43,12 @@ if __name__ == '__main__':
     print("Finding smiles...")
     print(int(args.processors), len(predictions))
     print("Number of CPUs: " + str(multiprocessing.cpu_count()))
-    num_jobs = min(len(predictions), int(args.processors))
+    
+    if len(predictions) == 0:
+        print("ERROR: No prediction files containing 'smile' found in the prediction directory!")
+        exit(1)
+        
+    num_jobs = max(1, min(len(predictions), int(args.processors)))
     print(num_jobs)
     with closing(Pool(num_jobs)) as pool:
         combined = pool.map(merge_on_smiles, predictions)
