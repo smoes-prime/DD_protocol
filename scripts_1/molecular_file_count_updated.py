@@ -59,10 +59,15 @@ if __name__=='__main__':
     for f in glob.glob(data_directory+'/*.txt'):
         files.append(f)
     print("Number Of Files:", len(files))
+    if len(files) == 0:
+        print("ERROR: no *.txt files found in:", data_directory)
+        print("For iteration > 1, complete the previous iteration phase 5 first")
+        print("(morgan_1024_predictions must contain predicted virtual-hit shards).")
+        exit(1)
 
     t=time.time()
     print("Reading Files...")
-    with closing(Pool(np.min([tot_process,len(files)]))) as pool:
+    with closing(Pool(np.min([tot_process, len(files)]))) as pool:
         rt = pool.map(molecule_count,files)
     print("Done Reading Finals - Time Taken", time.time()-t)
 

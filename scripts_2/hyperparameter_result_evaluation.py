@@ -288,8 +288,16 @@ for models_cf in model_to_use_with_cf:  # looping through the groups of models t
                 ref.write(str(mod_no)+','+str(main_thresholds[cf_to_use][count])+','+str(cf_to_use)+'\n')
             
             # Copying the specific models by their model_no to the best_models folder
-            copy2(path_to_model+'/model_'+str(mod_no), SAVE_PATH+'/iteration_'+str(n_iteration) + '/best_models/')
-            copy2(path_to_model+'/model_'+str(mod_no) + ".ddss", SAVE_PATH+'/iteration_'+str(n_iteration) + '/best_models/')
+            model_base = path_to_model + '/model_' + str(mod_no)
+            model_src = model_base
+            for candidate in [model_base + '.keras', model_base + '.h5', model_base]:
+                if os.path.exists(candidate):
+                    model_src = candidate
+                    break
+            model_ext = os.path.splitext(model_src)[1]
+            best_dir = SAVE_PATH + '/iteration_' + str(n_iteration) + '/best_models/'
+            copy2(model_src, best_dir + 'model_' + str(mod_no) + model_ext)
+            copy2(model_base + ".ddss", best_dir)
 
             count += 1
 

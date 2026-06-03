@@ -113,10 +113,12 @@ thresholds.columns = ['model_no', 'thresh', 'cutoff']
 tr = []
 models = []
 for f in glob.glob(file_path+'/iteration_'+str(it)+'/best_models/model_*'):
-    if "." not in f:    # skipping over the .ddss & .csv files
-        mn = int(f.split('/')[-1].split('_')[1])
-        tr.append(thresholds[thresholds.model_no == mn].thresh.iloc[0])
-        models.append(DDModel.load(file_path+'/iteration_'+str(it)+'/best_models/model_'+str(mn)))
+    base = f.split('/')[-1]
+    if base.endswith('.ddss') or base.endswith('.csv'):
+        continue
+    mn = int(base.split('_')[1].split('.')[0])
+    tr.append(thresholds[thresholds.model_no == mn].thresh.iloc[0])
+    models.append(DDModel.load(file_path+'/iteration_'+str(it)+'/best_models/model_'+str(mn)))
 
 print("Number of models to predict:", len(models))
 t = time.time()

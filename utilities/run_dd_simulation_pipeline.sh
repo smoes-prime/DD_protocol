@@ -62,6 +62,28 @@ if [[ ! -d "$PROJECT_DIR/iteration_1" ]]; then
   exit 1
 fi
 
+check_prev_predictions() {
+  local prev="$1"
+  local pred_dir="$PROJECT_DIR/iteration_${prev}/morgan_1024_predictions"
+  if [[ ! -d "$pred_dir" ]]; then
+    echo "ERROR: missing $pred_dir" >&2
+    echo "Finish iteration $prev phase 5 first:" >&2
+    echo "  ITER=$prev ./utilities/finish_iteration_phase5.sh" >&2
+    exit 1
+  fi
+  local n_txt
+  n_txt=$(find "$pred_dir" -maxdepth 1 -name '*.txt' 2>/dev/null | wc -l)
+  if [[ "$n_txt" -eq 0 ]]; then
+    echo "ERROR: $pred_dir has no *.txt prediction shards (found 0)." >&2
+    echo "Finish iteration $prev phase 5 first:" >&2
+    echo "  ITER=$prev ./utilities/finish_iteration_phase5.sh" >&2
+    exit 1
+  fi
+  echo "Prereq OK: iteration $prev has $n_txt prediction shard(s)."
+}
+
+check_prev_predictions "$((START_ITER - 1))"
+
 mkdir -p "$PROJECT_DIR/pipeline_logs"
 
 run_step() {
@@ -111,6 +133,7 @@ for ((it=START_ITER; it<=END_ITER; it++)); do
   fi
 
   echo "================ Iteration $it ================"
+  check_prev_predictions "$prev"
 
   # Phase 1
   run_step "$it" "phase1_count" \

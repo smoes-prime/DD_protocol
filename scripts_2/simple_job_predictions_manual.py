@@ -47,7 +47,7 @@ for f in part_files:
         ref.write('#!/bin/bash\n')
         cwd = os.getcwd()
         ref.write('cd {}\n'.format(cwd))
-        ref.write('python -u ' + 'Prediction_morgan_1024.py' + ' ' + '-fn' + ' ' + f.split('/')[
+        ref.write('python -u scripts_2/Prediction_morgan_1024.py ' + '-fn' + ' ' + f.split('/')[
             -1] + ' ' + '-protein' + ' ' + protein + ' ' + '-it' + ' ' + str(n_it) + ' ' + '-mdd' + ' ' + str(
             mdd) + ' ' + '-file_path' + ' ' + SAVE_PATH + '\n')
         ref.write("\n echo complete")
