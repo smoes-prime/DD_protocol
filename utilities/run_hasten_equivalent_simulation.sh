@@ -130,6 +130,6 @@ python utilities/final_extraction.py \
   -smile_dir "$DD_DATA_ROOT/library_smiles" \
   -prediction_dir "$PROJECT_DIR/iteration_${TOTAL_ITERATIONS}/morgan_1024_predictions" \
   -processors "$N_CPU" \
-  -mols_to_dock 100000
+  -mols_to_dock "$TRAIN_SIZE"
 
 echo "=== Pipeline Completed Successfully! ==="
