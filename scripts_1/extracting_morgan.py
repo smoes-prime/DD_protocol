@@ -81,7 +81,8 @@ def alternate_concat(files):
 
 
 def delete_all(files):
-    os.remove(files)
+    if os.path.exists(files):
+        os.remove(files)
 
 
 def morgan_duplicacy(f_name):
@@ -137,8 +138,9 @@ if __name__ == '__main__':
         print(type_to, time.time() - t)
 
     f_names = []
-    for f in glob.glob(file_path + '/' + protein + '/iteration_' + str(n_it) + '/morgan/*morgan*'):
-        f_names.append(f)
+    for f in glob.glob(file_path + '/' + protein + '/iteration_' + str(n_it) + '/morgan/*morgan*.csv'):
+        if not f.endswith('_updated.csv'):
+            f_names.append(f)
 
     t = time.time()
     with closing(Pool(np.min([tot_process, len(f_names)]))) as pool:
