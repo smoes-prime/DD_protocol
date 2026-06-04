@@ -115,10 +115,9 @@ def main():
                 f.write(f"\n... and {len(missing_all) - 50000} more\n")
         print(
             f"WARNING: {len(missing_all)} IDs had no score in master file. "
-            f"First 50k listed in {miss_file}",
+            f"First 50k listed in {miss_file}. Continuing anyway.",
             file=sys.stderr,
         )
-        sys.exit(2)
 
     print("Done.")
 
