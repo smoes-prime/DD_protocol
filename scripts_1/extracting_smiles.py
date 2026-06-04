@@ -65,7 +65,8 @@ def smile_duplicacy(f_name):
     os.remove(f_name)
 
 def delete_all(files):
-    os.remove(files)
+    if os.path.exists(files):
+        os.remove(files)
 
 if __name__ == '__main__':
     try:
@@ -165,7 +166,8 @@ if __name__ == '__main__':
 
     f_names = []
     for f in glob.glob(ITER_PATH + '/smile/*final*'):
-        f_names.append(f)
+        if not f.endswith('_updated.smi'):
+            f_names.append(f)
 
     t = time.time()
     with closing(Pool(np.min([tot_process, len(f_names)]))) as pool:
